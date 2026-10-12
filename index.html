@@ -445,137 +445,92 @@
       <div><div class="k">Niveau appelé</div><div class="v">${recommended}<small>${LEVEL_NAMES[recommended]}</small></div></div>
     </div>`;
 
-    // ---- 1. Où tu en es
-    let p1 = `Tes documents vivent dans ${storageName}, et tes équipes échangent via ${commsName}. `;
+    // ---- Diagnostic court (réécrit le 12 oct. au soir : une idée par phrase, pas de redite)
+    const li = a => a.filter(Boolean).map(x=>`<li>${x}</li>`).join('');
+    // 1. Où tu en es
+    const s1 = [];
     if(chainLevel === 2){
-      p1 += `Au moins un de ces outils est édité par une société américaine, ou tourne peut-être sur un cloud américain. Même quand les serveurs sont en Europe, la loi américaine (le CLOUD Act) permet à la justice des États-Unis d'y accéder via la société qui en a la garde. Ton stockage est donc sous le droit américain : c'est le niveau 2, la situation de presque toutes les entreprises françaises, un choix souvent fait sans y penser, en signant les licences bureautiques.`;
-      if(storage==='eu3' || (eu3Comms && !usComms)) p1 += ` Sais-tu sur quel cloud tournent tes outils européens en ligne ? Si leur hébergeur était une société européenne, vérifiée, ton stockage passerait au niveau 4.`;
-      if(storage==='us') p1 += ` <strong>Une vérification de deux minutes</strong> : sais-tu si tes données sont bien stockées en Europe ? Dans le centre d'administration Microsoft 365 : Paramètres, Paramètres de l'organisation, Profil de l'organisation, « Emplacement des données » ; chez Google, dans la console d'administration, « Régions de données ». Si la réponse était les États-Unis, tu serais au niveau 1.`;
+      s1.push(`Tes documents sont chez ${storageName}${usComms ? ', et tu utilises des outils américains' : ''} : la justice américaine peut y accéder, même si les serveurs sont en Europe.`);
+      if(storage==='eu3' || (eu3Comms && !usComms)) s1.push(`Tes outils européens en ligne tournent peut-être sur un cloud américain : sais-tu lequel ?`);
+      if(storage==='us') s1.push(`Vérifie que tes données sont bien en Europe : centre d'administration Microsoft 365, Paramètres, Paramètres de l'organisation, Profil de l'organisation, « Emplacement des données » (chez Google : « Régions de données »).`);
     } else {
-      p1 += `Ton stockage est sur une infrastructure que tu contrôles, ou dans un environnement dédié chez des hébergeurs de société européenne : aucune société américaine n'a la garde de tes documents.`;
+      s1.push(`Tes documents sont sur une infrastructure que tu contrôles, ou chez un hébergeur européen : aucune société américaine n'y a accès.`);
     }
-    if(!aiAnswered){
-      p1 += ` Tu n'as pas indiqué quels outils d'IA tes équipes utilisent (question 3) : le niveau affiché ne porte que sur ton stockage.`;
-    } else if(aiLevel===null){
-      p1 += ` Tes équipes n'utilisent pas encore d'outil d'IA : ton niveau est celui de ton stockage.`;
-    } else if(aiLevel===1){
-      p1 += aiUnknown
-        ? ` Tu ne sais pas quels outils d'IA tes équipes utilisent : par précaution, le simulateur suppose un assistant américain sans contrat entreprise, le cas le plus fréquent.`
-        : ` Au moins un assistant américain est utilisé sans contrat entreprise : ce que tes équipes y collent n'est couvert par aucun engagement de confidentialité, et peut servir à entraîner ses modèles.`;
-      p1 += ` Quel que soit ton stockage, c'est le <strong>niveau 1</strong>.`;
-    } else if(aiLevel===2){
-      p1 += chainLevel===4
-        ? ` Ton IA, elle, passe par une société ou un cloud américain : elle fait redescendre au <strong>niveau 2</strong> une chaîne dont le stockage est au niveau 4. Le savais-tu ?`
-        : ` Ton IA passe elle aussi par une société ou un cloud américain, sous contrat : tu es au <strong>niveau 2</strong>.`;
-    } else if(current===3){
-      p1 += chainLevel===2
-        ? ` Ton IA, elle, est européenne et hébergée en Europe : ce qu'elle lit, traite et produit est hors de portée du droit américain, pas tes documents. C'est le <strong>niveau 3</strong>.`
-        : ` Ton IA passe par un service européen partagé plutôt que par un environnement dédié : ta chaîne est au <strong>niveau 3</strong>.`;
-    } else {
-      p1 += ` Ton IA tourne elle aussi chez toi ou dans un environnement dédié : tu es au <strong>niveau 4</strong>, le plus protégé. Peu d'entreprises en sont là, parce qu'un client ou une réglementation l'exige, ou par décision du dirigeant sur son secret industriel.`;
-    }
+    if(!aiAnswered) s1.push(`Tu n'as pas indiqué quels outils d'IA tes équipes utilisent (question 3) : ton niveau ne porte que sur ton stockage.`);
+    else if(aiLevel===null) s1.push(`Tes équipes n'utilisent pas encore d'IA : ton niveau est celui de ton stockage.`);
+    else if(aiLevel===1) s1.push(aiUnknown ? `Tu ne sais pas ce que tes équipes utilisent : par précaution, c'est le <strong>niveau 1</strong>.` : `Côté IA, tu es au <strong>niveau 1</strong> (voir les questions plus bas).`);
+    else if(aiLevel===2) s1.push(`Ton IA passe par une société ou un cloud américain : <strong>niveau 2</strong>.`);
+    else if(current===3) s1.push(`Ton IA est européenne et hébergée en Europe : <strong>niveau 3</strong>.`);
+    else s1.push(`Ton IA tourne aussi chez toi ou dans un environnement dédié : <strong>niveau 4</strong>.`);
 
-    // ---- 2. Ce que tes clients et tes marchés pourraient attendre
-    let p2 = '';
-    const cl = clientLevel===4 ? "des acteurs publics, de la Défense ou des opérateurs d'importance vitale, ou leurs sous-traitants" : clientLevel===3 ? (hdsClient ? "des acteurs de la santé ou d'autres secteurs régulés" : "des acteurs régulés ou manipulant des données sensibles") : "des entreprises privées sans contrainte exprimée sur l'hébergement des données";
-    p2 += `Parmi tes clients actuels, les plus exigeants sont ${cl}. `;
-    if(clientLevel===4) p2 += `Ces clients imposent en général, par contrat ou par réglementation, qu'aucune société américaine n'ait accès à leurs données : c'est le niveau 4. Si l'un d'eux te demandait demain de le prouver, ta chaîne actuelle te le permettrait-elle ? `;
-    if(secnum) p2 += `<strong>SecNumCloud, une exigence qui s'ajoute.</strong> Ces clients ou ces marchés exigent en général un hébergeur qualifié SecNumCloud par l'ANSSI. C'est un label de sécurité auditée, distinct du niveau : une chaîne sans société américaine est au niveau 4 même sans label, mais elle ne suffirait pas à ces clients-là. Ton hébergeur figure-t-il dans le catalogue officiel (cyber.gouv.fr) ? Un « cloud de confiance » annoncé n'est pas forcément qualifié. `;
-    else if(clientLevel===3) p2 += `Aucune loi n'oblige ces clients à exiger une IA européenne de leurs prestataires ; on leur impose de maîtriser leurs sous-traitants. Si leur direction juridique te demandait où partent leurs données quand tu les analyses avec l'IA, que lui répondrais-tu ? Le simulateur retient le niveau 3 par précaution : c'est celui qui permettrait de répondre « dans une chaîne européenne ». `;
-    else p2 += `Ces clients ne te demandent rien de particulier : le niveau 2 leur conviendrait. `;
-    if(hds) p2 += `<strong>Santé, une exigence à part.</strong> Dès qu'on héberge des données de santé à caractère personnel pour un établissement ou un professionnel de santé, l'hébergeur doit être certifié HDS (Hébergeur de Données de Santé). C'est une certification distincte de SecNumCloud, qui ne dit rien de la nationalité : Microsoft, Google, AWS comme OVHcloud ont des offres certifiées. Ton hébergeur l'est-il ? `;
-    if(marketLevel > clientLevel){
-      p2 += marketLevel===4
-        ? `Et tu vises à deux ou trois ans des marchés publics, des appels d'offres SecNumCloud ou la Défense. L'exigence y monterait au niveau 4, sur toute ta chaîne et pas seulement sur l'IA. Ce que tu construis aujourd'hui tiendrait-il face à ces acheteurs ?`
-        : `Et tu vises à deux ou trois ans des clients en Allemagne ou en Europe du Nord, pour qui « hébergé par un acteur européen » peut être un critère de choix. L'exigence y monterait au niveau 3. Le simulateur le retient comme argument commercial, sans obligation légale.`;
-    } else if(markets.length && marketLevel <= clientLevel){
-      p2 += `Les marchés que tu vises n'ajoutent pas d'exigence par rapport à tes clients actuels.`;
-    }
-    if(own>0){
-      p2 += own===4 ? ` <strong>Et toi</strong>, tu refuses qu'une société américaine ait accès à tes données, où que ce soit : c'est la définition du niveau 4. Pour un secret industriel, le label SecNumCloud n'est pas nécessaire ; une chaîne sans société américaine suffit.`
-        : own===3 ? ` <strong>Et toi</strong>, tu veux que ce que l'IA lit et produit sur ta stratégie reste hors de portée du droit américain, sans changer de bureautique : c'est la définition du niveau 3.`
-        : ` <strong>Et toi</strong>, tu acceptes des acteurs américains sous contrat entreprise : ta propre exigence s'arrête au niveau 2.`;
-    } else if(val('own')==='0'){
-      p2 += ` Tu n'as pas encore de position propre sur tes données : le diagnostic repose sur les contraintes extérieures seules. Si tu devais en prendre une, laquelle serait-elle ?`;
-    }
+    // 2. Ce qu'on attend de toi
+    const s2 = [];
     if(required>2 && drivers.length){
       const d = drivers.length>1 ? drivers.slice(0,-1).join(', ')+' et '+drivers[drivers.length-1] : drivers[0];
-      p2 += ` <strong>Ce qui fixe le niveau exigé (${required}) :</strong> ${d}.`;
-    }
+      s2.push(`On attend de toi le <strong>niveau ${required}</strong>. Ce qui le fixe : ${d}.`);
+    } else s2.push(`Tes clients, tes marchés et tes usages ne demandent pas plus que le niveau 2.`);
+    if(clientLevel===4) s2.push(`Tes clients publics, Défense ou opérateurs d'importance vitale demandent en général qu'aucune société américaine n'ait accès à leurs données.`);
+    else if(clientLevel===3) s2.push(`Tes clients régulés ne sont pas obligés d'exiger une IA européenne, mais leur juridique te demandera où partent leurs données.`);
+    if(secnum) s2.push(`<strong>SecNumCloud, une exigence qui s'ajoute</strong> : ces clients ou ces marchés demandent en général un hébergeur qualifié par l'ANSSI (catalogue sur cyber.gouv.fr).`);
+    if(hds) s2.push(`<strong>Santé, une exigence à part</strong> : ton hébergeur doit être certifié HDS.`);
+    if(marketLevel > clientLevel) s2.push(`Les marchés que tu vises demanderaient le niveau ${marketLevel}${marketLevel===3 ? ' (argument commercial, sans obligation légale)' : ''}.`);
+    if(val('own')==='0') s2.push(`Tu n'as pas encore de position propre sur tes données : laquelle serait-elle ?`);
 
-    // ---- 3. Ce que tes usages exposent
-    const labels = uc.map(k=>UC[k].label);
-    let p3 = `Tu veux utiliser l'IA pour ${labels.length>1 ? labels.slice(0,-1).join(', ')+' et '+labels[labels.length-1] : labels[0]}. `;
-    const seesList = uc.filter(k=>k!=='veille').map(k=>UC[k].sees);
-    if(seesList.length) p3 += `Concrètement, l'IA verrait ${seesList.join(' ; ')}. `;
-    if(ucPersonal){
-      p3 += `Ces usages exposent des <strong>données personnelles</strong> (clients, prospects, salariés, fournisseurs) : le RGPD n'interdit pas de les confier à un prestataire américain, il encadre le transfert. Le risque est aussi financier (une amende CNIL peut atteindre 4 % du chiffre d'affaires) et réputationnel (une fuite ou une mise en demeure publique). Le simulateur fait donc monter le niveau exigé à 3 au minimum, par précaution. As-tu fait l'analyse d'impact, prévu les clauses avec l'éditeur et consulté ton délégué à la protection des données ? `;
-    }
-    if(ucStrategic){
-      p3 += `Ils exposent aussi des <strong>données stratégiques</strong> (contrats, prix, marges, décisions${uc.includes('pilotage')?', et avec la préparation d\'un CODIR, la pensée même de la direction':''}) : elles relèvent du secret des affaires, et ce sont elles que viserait une demande d'accès à motif économique. Pour ces données, c'est le niveau de ton <strong>stockage</strong> qui compte : l'outil qui lit tes fichiers et le modèle qui les analyse voient ce que tes équipes voient. `;
-    }
-    if(uc.some(k=>UC[k].acts)) p3 += `Plusieurs de ces usages font <strong>agir</strong> l'IA : elle déplacerait des fichiers, préparerait des réponses, écrirait dans tes outils. Quels droits serais-tu prêt à lui donner ? `;
-    p3 += `Enfin, quel que soit l'usage, <strong>ce que tes équipes tapent dans un assistant</strong> révèle la manière dont l'entreprise réfléchit, les questions qu'elle se pose, ce qui l'inquiète. Cette matière grise n'est dans aucun document et aucune loi ne la protège ; elle part chez l'éditeur de l'assistant. ${ucOnlyMG ? "Pour tes usages, c'est l'essentiel de ce qui est exposé. Choisirais-tu pour autant un assistant d'un niveau inférieur au reste de tes outils ?" : "Ton assistant est-il au même niveau que le reste de tes outils ?"}`;
+    // 3. Ce que tes usages exposent
+    const s3 = [];
+    if(ucPersonal) s3.push(`<strong>Des données personnelles</strong> (clients, salariés, fournisseurs). Le RGPD encadre leur transfert : c'est pourquoi le simulateur demande au moins le niveau 3.`);
+    if(ucStrategic) s3.push(`<strong>Des données stratégiques</strong> (contrats, prix, marges, décisions). Elles ne sont pas mieux protégées que l'endroit où tu les stockes.`);
+    if(uc.some(k=>UC[k].acts)) s3.push(`<strong>L'IA agirait</strong> : elle écrirait dans tes fichiers ou préparerait des réponses. Quels droits lui donnerais-tu ?`);
+    s3.push(`<strong>Ce que tes équipes tapent</strong> dans l'assistant part chez son éditeur, quel que soit l'usage.`);
 
-    // ---- 4. Les questions à te poser
-    let p4 = '';
+    // 4. Les questions à te poser
     const cur = Math.max(current, 2);
     const drivenByUsage = usageLevel===3 && Math.max(2,clientLevel,marketLevel)<3;
-    if(required <= cur && cur <= 2){
-      p4 = `Tes clients, tes marchés et tes usages n'appellent pas plus que ce que tu as déjà : <strong>tu es aligné.</strong> La protection d'ensemble est celle du maillon le plus faible, et ce maillon, ce sont tes documents chez ${storageName}. Une IA « plus souveraine » que ton stockage te protégerait-elle davantage ? Et entre deux outils de même niveau, quel critère ferait la différence pour toi : la performance, la simplicité, le prix ?`;
-    } else if(required <= cur && cur >= 3){
-      p4 = `Tu es déjà au niveau de ce qu'on attend de toi, ou au-dessus : <strong>tu es aligné.</strong> Si une équipe branchait un assistant américain en ligne « juste pour rédiger », que deviendrait la protection que tu as déjà construite et payée ? Qui, chez toi, veillerait à ce que l'IA reste au niveau de ton stockage ?`;
-    } else if(required === 3 && cur === 2){
-      p4 = `Il y a un écart d'un cran entre ce que tu as (niveau 2) et ce qu'${drivenByUsage ? 'appellent tes usages sur des données personnelles' : 'on attend de toi'} (niveau 3). <strong>Ce cran se franchirait sans toucher à ton stockage</strong> : tes documents resteraient chez ${storageName}, donc sous le droit américain, mais ce que l'IA lit, traite et produit (tes questions, tes synthèses, les extraits analysés) resterait dans une chaîne européenne. Il faudrait pour cela un outil européen <em>hébergé en Europe</em>, branché sur un modèle servi en Europe. <strong>Ce niveau ne s'achète pas encore en abonnement, il s'assemble</strong> : Dust et Mistral Vibe en SaaS tournent sur des clouds américains, alors qu'un outil open source installé chez un hébergeur européen et branché sur des modèles servis en Europe y parvient. Serais-tu prêt à porter un projet avec un prestataire plutôt qu'un abonnement ? Et si un client te demandait ce que ce niveau protège, saurais-tu lui dire aussi ce qu'il ne protège pas ?`;
-    } else if(required === 4 && cur < 4){
-      p4 = `Il y a un écart important entre ce que tu as (niveau ${cur}) et ce qu'on exige de toi (niveau 4). Le niveau 4 signifie qu'aucune société américaine n'a accès à tes données, nulle part. Or tes documents vivent dans ${storageName}${usComms?' et transitent par des outils américains':''}. Un modèle souverain qui lirait des documents déjà sous le droit américain, ce serait une porte blindée sur une tente. <strong>Changer d'IA suffirait-il ?</strong> La décision porterait plutôt sur ta bureautique et tes outils${usCrm?' (CRM compris)':''} : les migrer vers des acteurs européens, ou isoler techniquement les seules données concernées ? L'IA viendrait ensuite.`;
-    } else {
-      p4 = `Le niveau qu'appellent tes réponses dépasse ce que ta chaîne actuelle permet. Quel maillon de ta chaîne faudrait-il regarder en premier ?`;
-    }
-
-    if(current===1) p4 = `D'abord, un assistant américain sans contrat entreprise te place au niveau 1. Un contrat entreprise suffirait-il à te ramener au niveau 2 ? Et qui, chez toi, sait ce que les équipes utilisent vraiment ? ` + (required===2 ? `Une fois au niveau 2, tes clients, tes marchés et tes usages n'appelleraient pas davantage.` : p4);
-    let extra = [];
-    if(overBuilt) extra.push(`On t'a proposé un modèle installé sur tes propres serveurs ou dans un environnement dédié chez un hébergeur européen. Avec tes documents au niveau ${chainLevel}, cette solution t'apporterait-elle la sécurité attendue, ou seulement sa complexité ? C'est le cas de la porte blindée sur la tente.`);
-    if(underBuilt) extra.push(`On t'a aussi proposé une solution de niveau ${minIntent}. Suffirait-elle pour ${marketLevel>clientLevel?'les marchés que tu vises':(drivenByUsage?'les données personnelles que tes usages exposent':'tes clients les plus exigeants')}, qui appellent le niveau ${required} ?`);
-    if(debt) extra.push(`Un point de calendrier : aujourd'hui tes clients te laissent au niveau ${Math.max(2,clientLevel)}, mais les marchés que tu vises appelleraient le niveau ${marketLevel}. Si tu construisais ton IA au niveau ${current} maintenant, que coûterait la migration plus tard, sous pression commerciale ?`);
-    if(twoChains) extra.push(`Faudrait-il pour autant migrer toute l'entreprise ? Pas forcément. Le niveau vaut pour une chaîne, pas pour une société : on peut garder la bureautique au niveau ${chainLevel} et construire une chaîne de niveau ${recommended} pour les seules données qui l'appellent (R&amp;D, offres en cours, données de clients régulés), comme le font des grands groupes. La condition est technique : stockage distinct, aucune synchronisation, droits qui bloquent la copie. Si la séparation reposait sur une consigne aux équipes, tiendrait-elle au premier rush ?`);
-    if(needsProvider) extra.push(`Le niveau 3 ne s'achète pas encore en abonnement : il s'assemble chez un hébergeur européen, donc un prestataire, un intégrateur ou une DSI${skills==='0'?", ce que tu n'as pas en interne":""}. Qui porterait ce projet chez toi, et avec quel budget ?`);
+    let gap;
+    if(required <= cur && cur <= 2) gap = `Bonne nouvelle : tu es aligné. Une IA mieux protégée que tes documents ne t'apporterait pas grand-chose.`;
+    else if(required <= cur) gap = `Bonne nouvelle : tu es aligné. Qui veille à ce qu'aucune équipe ne branche un assistant américain « juste pour rédiger » ?`;
+    else if(required === 3) gap = `Pour passer au niveau 3, tu peux garder ta bureautique : il faut un outil et un modèle hébergés en Europe.`;
+    else if(required === 4) gap = `Changer d'IA ne suffirait pas : il faudrait aussi quitter ${usCrm ? 'ta bureautique et ton CRM américains' : 'ta bureautique américaine'}.`;
+    else gap = `Ton niveau actuel est en dessous de ce qu'on attend de toi : quel outil regarder en premier ?`;
+    if(current===1) gap = `D'abord, un assistant américain sans contrat entreprise te place au niveau 1 : un contrat entreprise suffirait-il, et sais-tu ce que tes équipes utilisent ? ` + (required===2 ? `Une fois au niveau 2, rien ne te demanderait davantage.` : gap);
+    const s4 = [gap];
+    if(overBuilt) s4.push(`On t'a proposé un modèle installé chez toi alors que tes documents restent au niveau ${chainLevel} : c'est la porte blindée sur une tente.`);
+    if(underBuilt) s4.push(`On t'a aussi proposé une solution de niveau ${minIntent} : elle ne suffirait pas pour le niveau ${required} demandé.`);
+    if(debt) s4.push(`Un point de calendrier : tes marchés visés demanderont le niveau ${marketLevel}. Construire au niveau ${current} maintenant t'obligerait à migrer plus tard.`);
+    if(twoChains) s4.push(`Faudrait-il pour autant migrer toute l'entreprise ? Pas forcément : tu peux isoler les seules données concernées dans un outil à part, si la séparation est technique (stockage distinct, aucune synchronisation, droits qui bloquent la copie).`);
+    if(needsProvider) s4.push(`Le niveau 3 ne s'achète pas encore en abonnement : il s'assemble chez un hébergeur européen, avec un prestataire ou ta DSI${skills==='0' ? ' (tu n\'en as pas en interne)' : ''}. Qui porterait ce projet ?`);
+    if(needsTeam) s4.push(`Le niveau 4 ne s'achète pas en abonnement : il faut une équipe pour installer et maintenir des serveurs, ${skills==='0' ? "ce que tu n'as pas en interne" : "au-delà d'une DSI classique"}.`);
     {
-      let pa = `<strong>Qui peut couper ton accès ?</strong> C'est l'autre moitié du mot souveraineté. Le 12 juin 2026, Anthropic a dû suspendre deux de ses modèles pendant près de trois semaines pour se conformer à des contrôles à l'export décidés à Washington ; ses clients n'avaient rien fait, et leurs données n'étaient pas en cause. `;
-      if(aiDependsUS) pa += `Ton IA dépend aujourd'hui d'une société ou d'un cloud américain : une décision du même ordre pourrait la toucher. `;
-      else if(aiLevel!==null && aiLevel>=3) pa += `Ton IA tourne chez un hébergeur européen : une décision américaine ne la toucherait pas directement. Mais qui la maintient, et que se passerait-il si ce prestataire s'arrêtait ? `;
-      else if(aiAnswered) pa += `Tes équipes n'utilisent pas encore d'IA : sais-tu, pour l'outil que tu choisiras, qui pourrait en couper l'accès ? `;
-      if(cut==='2') pa += `Tu dis qu'un processus clé s'arrêterait. Avec quoi tes équipes travailleraient-elles ? Un second outil, d'un autre éditeur, serait-il prêt ?`;
-      else if(cut==='1') pa += `Tu dis que tu ralentirais. Combien de temps pourrais-tu tenir, et qu'en serait-il dans deux ans, quand l'IA sera dans davantage de tes processus ?`;
-      else if(cut==='0') pa += `Tu dis que tu t'en passerais sans difficulté. Serait-ce encore vrai dans deux ans, quand l'IA sera dans davantage de tes processus ?`;
-      else pa += `Si ton outil d'IA était coupé trois semaines à partir de demain, quel processus s'arrêterait le premier ?`;
-      extra.push(pa);
+      let pa = `<strong>Qui peut couper ton accès ?</strong> En juin 2026, Anthropic a dû couper deux de ses modèles pendant près de trois semaines, sur décision de Washington. `;
+      if(aiDependsUS) pa += `Ton IA dépend aujourd'hui d'une société ou d'un cloud américain. `;
+      else if(aiLevel!==null && aiLevel>=3) pa += `Ton IA est hébergée en Europe : qui la maintiendrait si ton prestataire s'arrêtait ? `;
+      if(cut==='2') pa += `Tu dis qu'un processus clé s'arrêterait : as-tu un second outil prêt ?`;
+      else if(cut==='1') pa += `Tu dis que tu ralentirais : combien de temps pourrais-tu tenir ?`;
+      else if(cut==='0') pa += `Tu dis que tu t'en passerais : sera-ce encore vrai dans deux ans ?`;
+      else pa += `Si ton outil était coupé trois semaines, quel processus s'arrêterait le premier ?`;
+      s4.push(pa);
     }
-    if(needsTeam) extra.push(`Le niveau 4 ne s'achète pas en abonnement : il faut une équipe capable de déployer et de maintenir des serveurs, ${skills==='0'?"ce que tu n'as pas en interne":"au-delà d'une DSI classique"}. As-tu chiffré ce poste avant de décider ?`);
 
-    // ---- 5. Si tu visais ce niveau
-    const L = Object.assign({}, LEVELS[recommended]);
-    if(recommended === 3 && storage !== 'us'){
-      L.not = usComms
-        ? "Tes outils de communication américains (Teams, Slack, Notion, Confluence) resteraient le maillon faible : les documents qui y transitent sont exposés au droit américain, quel que soit le modèle choisi."
-        : "Ta chaîne repose sur des services en ligne européens : la protection dépend de l'hébergeur de chacun. Si l'un d'eux tournait sur un cloud américain, tu serais en réalité au niveau 2.";
+    // 5. Si tu visais le niveau appelé
+    const SHORT = {
+      1:{p:"rien de particulier.", n:"ni l'accès de la justice américaine, ni l'usage de tes données par l'éditeur."},
+      2:{p:"un contrat entreprise et des données en Europe.", n:"l'accès de la justice américaine."},
+      3:{p:"ce que l'IA lit et produit.", n: (storage!=='us' && usComms) ? "ce qui passe par tes outils de communication américains." : (storage!=='us' ? "rien, si l'un de tes outils européens tourne sur un cloud américain." : "tes documents, qui restent chez leur hébergeur actuel.")},
+      4:{p:"toute la chaîne.", n:"la sécurité au quotidien, qui repose sur ton équipe ou ton prestataire."}
+    }[recommended];
+    const s5 = [recommended===3 ? null : `Il faudrait ${LEVELS[recommended].cat}.`, `Ce que ça protégerait : ${SHORT.p}`, `Ce que ça ne protégerait pas : ${SHORT.n}`];
+    if(recommended===3){
+      s5.push(`<strong>Une question éliminatoire à poser</strong> à chaque éditeur : « sur quel cloud tournent vos serveurs, et est-ce garanti par contrat ? » Amazon, Google ou Microsoft : c'est américain, même en région Europe.`);
+      s5.push(`Si on te proposait un modèle ouvert d'origine chinoise, servi en Europe, tes clients l'accepteraient-ils ?`);
     }
-    let p5 = `La famille de solutions qui correspondrait au niveau ${recommended} serait <strong>${L.cat}</strong> <span class="ex">(${L.ex})</span>. ${L.effort} Côté budget : ${L.cost.charAt(0).toLowerCase()+L.cost.slice(1)}`;
-    if(recommended===3) p5 += ` <strong>Une question éliminatoire à poser à l'éditeur</strong> : « sur quel cloud tournent vos serveurs, et est-ce garanti par contrat ? ». Si l'outil européen qui lit tes documents tournait sur un cloud américain, tu serais au niveau 2 (c'est le cas de Dust en SaaS, sur Google Cloud, et de Mistral Vibe en SaaS, sur Azure, Google Cloud, CoreWeave et Mistral Compute). Amazon, Google Cloud ou Microsoft Azure : l'hébergeur est américain, même en région Europe. OVHcloud, Scaleway, Outscale, Cloud Temple, Mistral Compute ou tes propres serveurs : il est européen. La réponse figure aussi dans la liste des sous-traitants que tout éditeur publie au titre du RGPD, souvent dans son « Trust Center ».`;
-    if(recommended===3) p5 += ` Et si le modèle proposé était un modèle ouvert d'origine chinoise (Qwen, DeepSeek, GLM), même servi en Europe, tes clients l'accepteraient-ils ?`;
-    if(recommended===4) p5 += secnum
-      ? ` Pour tes clients publics, Défense ou OIV, ton hébergeur serait-il qualifié SecNumCloud par l'ANSSI ? La liste à jour est dans le catalogue officiel (cyber.gouv.fr).`
-      : ` Le label SecNumCloud ne serait pas nécessaire tant qu'aucun client ne l'exige : ce qui compte, c'est qu'aucune société américaine n'ait la garde de tes données. Si un appel d'offres l'exigeait un jour, ton hébergeur serait-il qualifié ou en cours de qualification (catalogue ANSSI, cyber.gouv.fr) ?`;
-    if(hds) p5 += ` Et pour les données de santé, ton hébergeur serait-il certifié HDS ?`;
+    if(recommended>=3 && hds) s5.push(`Ton hébergeur serait-il certifié HDS ?`);
 
     html += `<div class="reco">
-      <h3>1. Où tu en es</h3><p>${p1}</p>
-      <h3>2. Ce que tes clients et tes marchés pourraient attendre</h3><p>${p2}</p>
-      <h3>3. Ce que tes usages exposent</h3><p>${p3}</p>
-      <h3>4. Les questions à te poser</h3><p>${p4}</p>${extra.map(e=>`<p>${e}</p>`).join('')}
-      <h3>5. Si tu visais le niveau ${recommended}</h3><p>${p5}</p>
-      <p><span class="lbl">Ce que ce niveau protégerait</span><br>${L.protects}</p>
-      <p><span class="lbl">Ce qu'il ne protégerait pas</span><br>${L.not}</p>
+      <h3>1. Où tu en es</h3><ul>${li(s1)}</ul>
+      <h3>2. Ce qu'on attend de toi</h3><ul>${li(s2)}</ul>
+      <h3>3. Ce que tes usages exposent</h3><ul>${li(s3)}</ul>
+      <h3>4. Les questions à te poser</h3><ul>${li(s4)}</ul>
+      <h3>5. Si tu visais le niveau ${recommended}</h3><ul>${li(s5)}</ul>
     </div>`;
     out.innerHTML = html;
   }
